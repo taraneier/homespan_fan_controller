@@ -45,7 +45,7 @@
 Adafruit_EMC2101  emc2101;
 unsigned long lastMillis;
 // Use dedicated hardware SPI pins
-// Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 
 struct VentFan : Service::Fan{
@@ -54,7 +54,7 @@ struct VentFan : Service::Fan{
   SpanCharacteristic *ventOn;                             
   SpanCharacteristic *ventSpeed;             // store a reference to the On Characteristic
   
-  VentFan(Adafruit_EMC2101  emc2101) : Service::Fan(){       // constructor() 
+  VentFan(Adafruit_EMC2101  emc2101, Adafruit_ST7789  tft) : Service::Fan(){       // constructor() 
     ventOn = new Characteristic::Active();   
     ventSpeed = (new Characteristic::RotationSpeed(50))->setRange(0,100,25); 
                
@@ -62,6 +62,8 @@ struct VentFan : Service::Fan{
       // (new Characteristic::RotationSpeed   // NEW: This allows control of the Rotation Speed of the Fan, with an initial value of 50% and a range from 0-100 in steps of 25%
     // ventOn=new Characteristic::On();      // instantiate the On Characteristic and save it as lampPower
     this->emc2101=emc2101;     
+    
+    this->tft=tft;
     this->tft.init(135, 240); // Init ST7789 240x135
     this->tft.setRotation(3);
     this->tft.fillScreen(ST77XX_BLACK);        
@@ -95,7 +97,7 @@ struct VentFan : Service::Fan{
     tft.setTextColor(ST77XX_RED);
     tft.setTextSize(2);
     // tft.println(WiFi.localIP());
-}
+  }
   boolean update(){                          // update() method
 
     emc2101.setDutyCycle(ventSpeed->getNewVal()) ;
@@ -122,9 +124,10 @@ void setup() {
   digitalWrite(TFT_I2C_POWER, HIGH);
   delay(10);
   
-  // tft.init(135, 240); // Init ST7789 240x135
-  // tft.setRotation(3);
-  // tft.fillScreen(ST77XX_BLACK);
+  tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+  tft.init(135, 240); // Init ST7789 240x135
+  tft.setRotation(3);
+  tft.fillScreen(ST77XX_BLACK);
   Serial.println(F("TFT Initialized"));
 
   // updateDisplay();
@@ -132,7 +135,7 @@ void setup() {
   Serial.println("Adafruit EMC2101 test!");
 
   // Try to initialize!
-  if (!emc2101.begin()) {
+  if (!emc2101.begin(0x4C)) {
     Serial.println("Failed to find EMC2101 chip");
     while (1) { delay(10); }
   }
@@ -147,7 +150,7 @@ void setup() {
 
     // new Service::Fan();                             
      
-    new VentFan(emc2101);
+    new VentFan(emc2101, tft);
   // NOTE 1: Setting the initial value of the Brightness Characteristic to 50% does not by itself cause HomeKit to turn the light on to 50% upon start-up.
   // Rather, this is governed by the initial value of the On Characteristic, which in this case happens to be set to true.  If it were set to false,
   // or left unspecified (default is false) then the LightBulb will be off at start-up.  However, it will jump to 50% brightness as soon as turned on
@@ -170,33 +173,33 @@ void setup() {
 void loop(){
   
   homeSpan.poll();         // run HomeSpan!
-  // if (millis() - lastMillis >= 10*1000UL) 
-  // {
-  //  lastMillis = millis();  //get ready for the next iteration
-  //   tft.setTextWrap(false);
-  //   tft.fillScreen(ST77XX_BLACK);
-  //   tft.setCursor(0, 1);
-  //   tft.setTextColor(ST77XX_BLUE);
-  //   tft.setTextSize(3);
-  //   tft.println("RPM:");
-  //   tft.setCursor(120, 1);
-  //   tft.println("PWM:");
+  if (millis() - lastMillis >= 1*1000UL) 
+  {
+   lastMillis = millis();  //get ready for the next iteration
+    tft.setTextWrap(false);
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(0, 1);
+    tft.setTextColor(ST77XX_BLUE);
+    tft.setTextSize(3);
+    tft.println("RPM:");
+    tft.setCursor(120, 1);
+    tft.println("PWM:");
     
-  //   tft.setCursor(0, 41);
-  //   tft.setTextColor(ST77XX_GREEN);
-  //   tft.setTextSize(2);
-  //   tft.print(emc2101.getFanRPM());
-  //   // tft.println(" C");
-  //   // tft.print(20);
-  //   // tft.println(" F");
+    tft.setCursor(0, 41);
+    tft.setTextColor(ST77XX_GREEN);
+    tft.setTextSize(2);
+    tft.print(emc2101.getFanRPM());
+    // tft.println(" C");
+    // tft.print(20);
+    // tft.println(" F");
     
-  //   tft.setCursor(120, 41);
-  //   tft.print(emc2101.getDutyCycle());
-  //   // tft.println("%");
-  //   tft.setCursor(0, 110);
-  //   tft.setTextColor(ST77XX_RED);
-  //   tft.setTextSize(2);
-  //   // tft.println(WiFi.localIP());
-  // }
+    tft.setCursor(120, 41);
+    tft.print(emc2101.getDutyCycle());
+    // tft.println("%");
+    tft.setCursor(0, 110);
+    tft.setTextColor(ST77XX_RED);
+    tft.setTextSize(2);
+  
+  }
   
 } // end of loop()
